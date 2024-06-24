@@ -1,6 +1,8 @@
 package server
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 
 	"teenyurl/internal/database"
@@ -21,6 +23,9 @@ func New() *FiberServer {
 
 		db: database.New(),
 	}
-
+	err := server.db.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
 	return server
 }

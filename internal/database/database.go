@@ -3,38 +3,38 @@ package database
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"teenyurl/internal/types"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/joho/godotenv/autoload"
+	_ "github.com/lib/pq"
 )
 
 // Service represents a service that interacts with a database.
 type Service interface {
-	// Health returns a map of health status information.
-	// The keys and values in the map are service-specific.
 	Health() map[string]string
-
-	// Close terminates the database connection.
-	// It returns an error if the connection cannot be closed.
 	Close() error
+	CreateUser(*types.User) error
+	Init() error
 }
 
 type service struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
 var (
-	database   = os.Getenv("DB_DATABASE")
-	password   = os.Getenv("DB_PASSWORD")
-	username   = os.Getenv("DB_USERNAME")
-	port       = os.Getenv("DB_PORT")
-	host       = os.Getenv("DB_HOST")
-	schema     = os.Getenv("DB_SCHEMA")
+	database = os.Getenv("DB_DATABASE")
+	password = os.Getenv("DB_PASSWORD")
+	username = os.Getenv("DB_USERNAME")
+	// port       = os.Getenv("DB_PORT")
+	// host       = os.Getenv("DB_HOST")
+	// schema     = os.Getenv("DB_SCHEMA")
 	dbInstance *service
 )
 
@@ -43,8 +43,12 @@ func New() Service {
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
-	db, err := sql.Open("pgx", connStr)
+	// connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
+	// db, err := sql.Open("pgx", connStr)
+
+	// sqlx
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", username, password, database)
+	db, err := sqlx.Connect("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,6 +56,10 @@ func New() Service {
 		db: db,
 	}
 	return dbInstance
+}
+
+func (s *service) Init() error {
+	return s.createTables()
 }
 
 // Health checks the health of the database connection by pinging the database.
@@ -105,11 +113,53 @@ func (s *service) Health() map[string]string {
 	return stats
 }
 
-// Close closes the database connection.
-// It logs a message indicating the disconnection from the specific database.
-// If the connection is successfully closed, it returns nil.
-// If an error occurs while closing the connection, it returns the error.
 func (s *service) Close() error {
 	log.Printf("Disconnected from database: %s", database)
 	return s.db.Close()
+}
+
+func (s *service) CreateUser(user *types.User) error {
+	createUserQuery := `insert into users
+	(first_name, last_name, email, encrypted_password, created_at)
+	values ($1, $2, $3, $4, $5)`
+
+	userFromDb := &types.User{}
+
+	getUserQuery := "select * from users where email = $1"
+	err := s.db.Get(userFromDb, getUserQuery, user.Email)
+
+	if err != sql.ErrNoRows {
+		return errors.New("email already exists")
+	}
+
+	_, err = s.db.Query(
+		createUserQuery,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		user.EncryptedPassword,
+		user.CreatedAt,
+	)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) createTables() error {
+	userTableQuery := `create table if not exists t_users (
+		id serial primary key,
+		first_name varchar(100),
+		last_name varchar(100),
+		email varchar(100),
+		encrypted_password varchar(100),
+		created_at timestamp
+	);`
+	_, err := s.db.Exec(userTableQuery)
+	// return err
+	if err != nil {
+		return fmt.Errorf("error while creating users table: %s", err)
+	}
+	return nil
 }
