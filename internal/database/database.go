@@ -22,6 +22,7 @@ type Service interface {
 	Close() error
 	CreateUser(*types.User) error
 	Init() error
+	GetUserByEmail(string) (*types.User, error)
 }
 
 type service struct {
@@ -147,8 +148,20 @@ func (s *service) CreateUser(user *types.User) error {
 	return nil
 }
 
+func (s *service) GetUserByEmail(email string) (*types.User, error) {
+	userFromDb := &types.User{}
+	getUserQuery := "select * from users where email = $1"
+	err := s.db.Get(userFromDb, getUserQuery, email)
+
+	if err == sql.ErrNoRows {
+		return nil, errors.New("invalid email")
+	}
+
+	return userFromDb, nil
+}
+
 func (s *service) createTables() error {
-	userTableQuery := `create table if not exists t_users (
+	userTableQuery := `create table if not exists users (
 		id serial primary key,
 		first_name varchar(100),
 		last_name varchar(100),
@@ -159,7 +172,23 @@ func (s *service) createTables() error {
 	_, err := s.db.Exec(userTableQuery)
 	// return err
 	if err != nil {
-		return fmt.Errorf("error while creating users table: %s", err)
+		log.Fatalf("error while creating users table: %s", err.Error())
+
 	}
+
+	sessionTableQuery := `create table if not exists session (
+		session_id varchar(100) primary key,
+		user_id int,
+		first_name varchar(100),
+		last_name varchar(100),
+		email varchar(100)
+	);`
+
+	_, err = s.db.Exec(sessionTableQuery)
+	// return err
+	if err != nil {
+		log.Fatalf("error while creating sessions table: %s", err.Error())
+	}
+
 	return nil
 }

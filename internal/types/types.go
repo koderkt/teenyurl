@@ -12,12 +12,29 @@ type User struct {
 }
 
 type CreateUserRequest struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Email     string `json:"email"`
-	Password  string `json:"password"`
+	FirstName string `json:"first_name" validate:"required"`
+	LastName  string `json:"last_name" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password" validate:"required,min=8"`
 }
 
+
+type UserSignInRequest struct {
+	Email string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8"`
+}
+
+type UserSession struct {
+	Id int
+	FirstName string
+	LastName  string
+	Email     string
+}
 type ErrorResponse struct {
 	Error string
+}
+
+
+type ShortenRequest struct {
+	LongUrl string
 }
