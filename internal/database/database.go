@@ -23,6 +23,8 @@ type Service interface {
 	CreateUser(*types.User) error
 	Init() error
 	GetUserByEmail(string) (*types.User, error)
+	CreateShortURL(*types.Link) error
+	GetShortURL(string) (*types.Link, error)
 }
 
 type service struct {
@@ -176,19 +178,51 @@ func (s *service) createTables() error {
 
 	}
 
-	sessionTableQuery := `create table if not exists session (
-		session_id varchar(100) primary key,
-		user_id int,
-		first_name varchar(100),
-		last_name varchar(100),
-		email varchar(100)
+	linkTableQuery := `CREATE TABLE if not exists urls (
+    	id SERIAL PRIMARY KEY,
+    original_url TEXT NOT NULL,
+    short_url TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_id INT NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT TRUE
 	);`
-
-	_, err = s.db.Exec(sessionTableQuery)
+	_, err = s.db.Exec(linkTableQuery)
 	// return err
 	if err != nil {
-		log.Fatalf("error while creating sessions table: %s", err.Error())
+		log.Fatalf("error while creating link table: %s", err.Error())
 	}
 
 	return nil
+}
+
+func (s *service) CreateShortURL(link *types.Link)  error {
+	createLinkQuery := `insert into urls
+	(original_url, short_url, user_id)
+	values ($1, $2, $3)`
+
+	_, err := s.db.Query(
+		createLinkQuery,
+		link.OriginalURL,
+		link.ShortURL,
+		link.UserId,
+	)
+	if err != nil {
+		return err
+	}
+
+	
+
+	return nil
+}
+
+func (s *service) GetShortURL(shortURL string) (*types.Link, error) {
+	record := &types.Link{}
+	getLinkQuery := "select * from urls where short_url = $1"
+	err := s.db.Get(record, getLinkQuery, shortURL)
+
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+
+	return record, nil
 }

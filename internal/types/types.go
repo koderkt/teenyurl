@@ -18,14 +18,13 @@ type CreateUserRequest struct {
 	Password  string `json:"password" validate:"required,min=8"`
 }
 
-
 type UserSignInRequest struct {
-	Email string `json:"email" validate:"required,email"`
+	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`
 }
 
 type UserSession struct {
-	Id int
+	Id        int
 	FirstName string
 	LastName  string
 	Email     string
@@ -34,7 +33,22 @@ type ErrorResponse struct {
 	Error string
 }
 
-
 type ShortenRequest struct {
-	LongUrl string
+	LongUrl string `json:"long_url" validate:"required,long_url"`
+}
+
+type Link struct {
+	Id            int  `db:"id"`
+	OriginalURL   string  `db:"original_url"`
+	ShortURL      string  `db:"short_url"`
+	CreatedAt     time.Time  `db:"created_at"`
+	UserId        int  `db:"user_id"`
+	IsEnabled     bool  `db:"is_enabled"`
+}
+
+
+type CreateShortURLResponse struct{
+	ShortURL string
+	OriginalURL string
+	LinkId int
 }

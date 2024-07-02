@@ -1,12 +1,19 @@
 package utils
 
 import (
+	"math/rand"
+	"time"
 	"unicode"
-
+	
 	"github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/bcrypt"
 )
 
+
+const (
+	base62Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	base62Len   = len(base62Chars)
+)
 // EncryptPassword generates a bcrypt hash of the password.
 func EncryptPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -48,4 +55,17 @@ func PasswordValidator(fl validator.FieldLevel) bool {
 	}
 
 	return hasUpperCase && hasLowerCase && hasSpecial
+}
+
+
+func GenerateShortCode(codeLength int) string {
+	source := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(source)
+
+	var shortCode string
+	for i := 0; i < codeLength; i++ {
+		shortCode += string(base62Chars[r.Intn(base62Len)])
+	}
+
+	return shortCode
 }

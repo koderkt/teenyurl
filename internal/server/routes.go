@@ -2,8 +2,11 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/url"
 	"teenyurl/internal/types"
 	"teenyurl/internal/utils"
 	"time"
@@ -20,6 +23,7 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Get("/health", s.healthHandler)
 	s.App.Post("/signup", s.SignUpHandler)
 	s.App.Post("/signin", s.SignInHandler)
+	s.App.Post("/links", s.CreateShortURLHandler)
 }
 
 func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {
@@ -165,7 +169,92 @@ func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 	})
 }
 
+func (s *FiberServer) CreateShortURLHandler(c *fiber.Ctx) error {
+	sessionHeader := c.Get("Authorization")
+
+	// ensure the session header is not empty and in the correct format
+	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
+		return c.JSON(fiber.Map{"error": "invalid session header"})
+	}
+	// get the session id
+	sessionId := sessionHeader[7:]
+	userSession, err := s.GetSession(sessionId)
+	if err != nil {
+		c.SendStatus(401)
+		return c.JSON(fiber.Map{"message": "You are not logged in..."})
+	}
+	longURLRequst := new(types.ShortenRequest)
+
+	err = c.BodyParser(longURLRequst)
+	if err != nil {
+		c.SendStatus(fiber.StatusInternalServerError)
+		return c.JSON(fiber.Map{"message": err.Error()})
+	}
+	parsedURL, err := url.ParseRequestURI(longURLRequst.LongUrl)
+	if err != nil {
+		return c.JSON(fiber.Map{"message": "invalid url"})
+	}
+
+	// Check if the scheme (protocol) and host (domain) are valid
+	if parsedURL.Scheme == "" || parsedURL.Host == "" {
+		return c.JSON(fiber.Map{"message": "invalid url"})
+	}
+
+	// Validate whether the link is valid
+	genaratedShortCode := utils.GenerateShortCode(6)
+
+	_, err = s.db.GetShortURL(genaratedShortCode)
+
+	if err != sql.ErrNoRows {
+		c.SendStatus(fiber.StatusInternalServerError)
+		return c.JSON(fiber.Map{"message": err.Error()})
+	}
+
+	link := &types.Link{
+		OriginalURL: longURLRequst.LongUrl,
+		ShortURL:    genaratedShortCode,
+		UserId:      userSession.Id,
+	}
+
+	err = s.db.CreateShortURL(link)
+	if err != nil {
+		log.Printf("%v | %s", time.Now(), err.Error())
+		return c.JSON(fiber.Map{"error": "failed to create short url"})
+	}
+
+	recordFromDB, err := s.db.GetShortURL(link.ShortURL)
+
+	if err != nil {
+		c.SendStatus(fiber.StatusInternalServerError)
+		return c.JSON(fiber.Map{"message": "failed to create short url"})
+	}
+	responseData := types.CreateShortURLResponse{
+		ShortURL:    recordFromDB.ShortURL,
+		OriginalURL: recordFromDB.OriginalURL,
+		LinkId:      recordFromDB.Id,
+	}
+	return c.Status(fiber.StatusAccepted).JSON(responseData)
+}
 
 func (s *FiberServer) healthHandler(c *fiber.Ctx) error {
 	return c.JSON(s.db.Health())
+}
+
+func (s *FiberServer) GetSession(session string) (*types.UserSession, error) {
+	data, err := s.redisClient.Get(context.Background(), session).Result()
+	if err != nil {
+		log.Printf("%v | %s", time.Now().Local(), err.Error())
+
+		return nil, err
+	}
+
+	var userSession types.UserSession
+	err = json.Unmarshal([]byte(data), &userSession)
+	if err != nil {
+		log.Printf("%v | %s", time.Now().Local(), err.Error())
+		return nil, err
+	}
+
+	return &userSession, nil
+
 }
