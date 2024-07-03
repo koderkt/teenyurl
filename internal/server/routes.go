@@ -24,6 +24,7 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Post("/signup", s.SignUpHandler)
 	s.App.Post("/signin", s.SignInHandler)
 	s.App.Post("/links", s.CreateShortURLHandler)
+	s.App.Get(":shortCode", s.ShortURLHandler)
 }
 
 func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {
@@ -203,7 +204,7 @@ func (s *FiberServer) CreateShortURLHandler(c *fiber.Ctx) error {
 	// Validate whether the link is valid
 	genaratedShortCode := utils.GenerateShortCode(6)
 
-	_, err = s.db.GetShortURL(genaratedShortCode)
+	_, err = s.db.GetLink(genaratedShortCode)
 
 	if err != sql.ErrNoRows {
 		c.SendStatus(fiber.StatusInternalServerError)
@@ -222,7 +223,7 @@ func (s *FiberServer) CreateShortURLHandler(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"error": "failed to create short url"})
 	}
 
-	recordFromDB, err := s.db.GetShortURL(link.ShortURL)
+	recordFromDB, err := s.db.GetLink(link.ShortURL)
 
 	if err != nil {
 		c.SendStatus(fiber.StatusInternalServerError)
@@ -257,4 +258,29 @@ func (s *FiberServer) GetSession(session string) (*types.UserSession, error) {
 
 	return &userSession, nil
 
+}
+
+func (s *FiberServer) ShortURLHandler(c *fiber.Ctx) error {
+	sessionHeader := c.Get("Authorization")
+
+	// ensure the session header is not empty and in the correct format
+	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
+		return c.JSON(fiber.Map{"error": "invalid session header"})
+	}
+	// get the session id
+	sessionId := sessionHeader[7:]
+	_, err := s.GetSession(sessionId)
+	if err != nil {
+		c.SendStatus(401)
+		return c.JSON(fiber.Map{"message": "You are not logged in..."})
+	}
+	shortCode := c.Params("shortCode")
+	link, err := s.db.GetLink(shortCode)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "link not found",
+		})
+	}
+
+	return c.Redirect(link.OriginalURL, fiber.StatusPermanentRedirect)
 }

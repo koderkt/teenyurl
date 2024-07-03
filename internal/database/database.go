@@ -24,7 +24,8 @@ type Service interface {
 	Init() error
 	GetUserByEmail(string) (*types.User, error)
 	CreateShortURL(*types.Link) error
-	GetShortURL(string) (*types.Link, error)
+	GetLink(string) (*types.Link, error)
+	// GetOriginalURL(string) (string, error)
 }
 
 type service struct {
@@ -195,7 +196,7 @@ func (s *service) createTables() error {
 	return nil
 }
 
-func (s *service) CreateShortURL(link *types.Link)  error {
+func (s *service) CreateShortURL(link *types.Link) error {
 	createLinkQuery := `insert into urls
 	(original_url, short_url, user_id)
 	values ($1, $2, $3)`
@@ -210,12 +211,10 @@ func (s *service) CreateShortURL(link *types.Link)  error {
 		return err
 	}
 
-	
-
 	return nil
 }
 
-func (s *service) GetShortURL(shortURL string) (*types.Link, error) {
+func (s *service) GetLink(shortURL string) (*types.Link, error) {
 	record := &types.Link{}
 	getLinkQuery := "select * from urls where short_url = $1"
 	err := s.db.Get(record, getLinkQuery, shortURL)
