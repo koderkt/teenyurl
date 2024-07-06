@@ -38,17 +38,29 @@ type ShortenRequest struct {
 }
 
 type Link struct {
-	Id            int  `db:"id"`
-	OriginalURL   string  `db:"original_url"`
-	ShortURL      string  `db:"short_url"`
-	CreatedAt     time.Time  `db:"created_at"`
-	UserId        int  `db:"user_id"`
-	IsEnabled     bool  `db:"is_enabled"`
+	Id          int       `db:"id"`
+	OriginalURL string    `db:"original_url"`
+	ShortURL    string    `db:"short_url"`
+	CreatedAt   time.Time `db:"created_at"`
+	UserId      int       `db:"user_id"`
+	IsEnabled   bool      `db:"is_enabled"`
 }
 
-
-type CreateShortURLResponse struct{
-	ShortURL string
+type CreateShortURLResponse struct {
+	ShortURL    string
 	OriginalURL string
-	LinkId int
+	LinkId      int
 }
+
+type Clicks struct {
+	Id int	`db:"id"`
+	ShortCode  string `db:"short_code"`
+	Timestamp  time.Time `db:"time_stamp"`
+	DeviceType string `db:"device_type"`
+	Location   string `db:"location"`
+}
+
+
+
+
+

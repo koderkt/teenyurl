@@ -25,6 +25,10 @@ type Service interface {
 	GetUserByEmail(string) (*types.User, error)
 	CreateShortURL(*types.Link) error
 	GetLink(string) (*types.Link, error)
+	GetLinks(int) (*[]types.Link, error)
+	InsertAnalytics(*types.Clicks) error
+	GetAnalystics(string) (*[]types.Clicks, error)
+
 	// GetOriginalURL(string) (string, error)
 }
 
@@ -193,6 +197,19 @@ func (s *service) createTables() error {
 		log.Fatalf("error while creating link table: %s", err.Error())
 	}
 
+	query := `CREATE TABLE IF NOT EXISTS clicks (
+		id SERIAL PRIMARY KEY,
+		short_code VARCHAR(6) NOT NULL,
+		time_stamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		device_type VARCHAR(50),
+		location VARCHAR(100)
+		);`
+	_, err = s.db.Exec(query)
+	// return err
+	if err != nil {
+		log.Fatalf("error while creating clicks table: %s", err.Error())
+	}
+
 	return nil
 }
 
@@ -224,4 +241,44 @@ func (s *service) GetLink(shortURL string) (*types.Link, error) {
 	}
 
 	return record, nil
+}
+
+func (s *service) InsertAnalytics(analytics *types.Clicks) error {
+	query := `INSERT INTO clicks (short_code, device_type, location)
+	values ($1, $2, $3)`
+
+	_, err := s.db.Query(
+		query,
+		analytics.ShortCode,
+		analytics.DeviceType,
+		analytics.Location,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) GetAnalystics(shortCode string) (*[]types.Clicks, error) {
+	record := &[]types.Clicks{}
+	getClicksQuery := "select * from clicks where short_code = $1"
+	err := s.db.Select(record, getClicksQuery, shortCode)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return record, nil
+}
+
+func (s *service) GetLinks(userId int) (*[]types.Link, error) {
+	var links []types.Link
+	getClicksQuery := "SELECT * FROM urls WHERE user_id = $1"
+	err := s.db.Select(&links, getClicksQuery, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &links, nil
 }

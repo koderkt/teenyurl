@@ -24,7 +24,9 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Post("/signup", s.SignUpHandler)
 	s.App.Post("/signin", s.SignInHandler)
 	s.App.Post("/links", s.CreateShortURLHandler)
+	s.App.Get("/links", s.GetLinksHandler)
 	s.App.Get(":shortCode", s.ShortURLHandler)
+	s.App.Get("/analytics/:shortCode", s.AnalyticsHandler)
 }
 
 func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {
@@ -277,10 +279,84 @@ func (s *FiberServer) ShortURLHandler(c *fiber.Ctx) error {
 	shortCode := c.Params("shortCode")
 	link, err := s.db.GetLink(shortCode)
 	if err != nil {
+
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "link not found",
 		})
 	}
+	analyticsData := types.Clicks{
+		ShortCode:  shortCode,
+		DeviceType: "Unknown",
+		Location:   "Unknown",
+	}
 
+	err = s.db.InsertAnalytics(&analyticsData)
+	if err != nil {
+		log.Printf("%v | %s", time.Now(), err.Error())
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to record analytics",
+		})
+	}
 	return c.Redirect(link.OriginalURL, fiber.StatusPermanentRedirect)
+}
+
+func (s *FiberServer) AnalyticsHandler(c *fiber.Ctx) error {
+	sessionHeader := c.Get("Authorization")
+
+	// ensure the session header is not empty and in the correct format
+	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
+		return c.JSON(fiber.Map{"error": "invalid session header"})
+	}
+	// get the session id
+	sessionId := sessionHeader[7:]
+	_, err := s.GetSession(sessionId)
+	if err != nil {
+		c.SendStatus(401)
+		return c.JSON(fiber.Map{"message": "You are not logged in..."})
+	}
+	shortCode := c.Params("shortCode")
+
+	clicks, err := s.db.GetAnalystics(shortCode)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.SendStatus(fiber.StatusAccepted)
+			return err
+		} else {
+			log.Printf("%v | %s", time.Now(), err.Error())
+
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "something went wrong"})
+		}
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(clicks)
+
+}
+
+func (s *FiberServer) GetLinksHandler(c *fiber.Ctx) error {
+	sessionHeader := c.Get("Authorization")
+	fmt.Println("in get link")
+	// ensure the session header is not empty and in the correct format
+	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
+		return c.JSON(fiber.Map{"error": "invalid session header"})
+	}
+	// get the session id
+	sessionId := sessionHeader[7:]
+	user, err := s.GetSession(sessionId)
+	if err != nil {
+		c.SendStatus(401)
+		return c.JSON(fiber.Map{"message": "You are not logged in..."})
+	}
+
+	links, err := s.db.GetLinks(user.Id)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.SendStatus(fiber.StatusAccepted)
+			return err
+		} else {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "something went wrong"})
+		}
+	}
+	return c.Status(fiber.StatusAccepted).JSON(links)
 }
