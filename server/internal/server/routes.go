@@ -97,7 +97,7 @@ func (s *FiberServer) SignInHandler(c *fiber.Ctx) error {
 	}
 
 	// Store session_id and send it to client
-	err = s.redisClient.Set(context.Background(), sessionId, string(userSession), 2*time.Hour).Err()
+	err = s.redisClient.Set(context.Background(), "session:"+sessionId, string(userSession), 2*time.Hour).Err()
 	if err != nil {
 		fmt.Println(err)
 
@@ -263,19 +263,19 @@ func (s *FiberServer) GetSession(session string) (*types.UserSession, error) {
 }
 
 func (s *FiberServer) ShortURLHandler(c *fiber.Ctx) error {
-	sessionHeader := c.Get("Authorization")
-
-	// ensure the session header is not empty and in the correct format
-	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
-		return c.JSON(fiber.Map{"error": "invalid session header"})
-	}
-	// get the session id
-	sessionId := sessionHeader[7:]
-	_, err := s.GetSession(sessionId)
-	if err != nil {
-		c.SendStatus(401)
-		return c.JSON(fiber.Map{"message": "You are not logged in..."})
-	}
+	// sessionHeader := c.Get("Authorizati  on")
+	
+	// // ensure the session header is not empty and in the correct format
+	// if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
+	// 	return c.JSON(fiber.Map{"error": "invalid session header"})
+	// }
+	// // get the session id
+	// sessionId := sessionHeader[7:]
+	// _, err := s.GetSession(sessionId)
+	// if err != nil {
+	// 	c.SendStatus(401)
+	// 	return c.JSON(fiber.Map{"message": "You are not logged in..."})
+	// }
 	shortCode := c.Params("shortCode")
 	link, err := s.db.GetLink(shortCode)
 	if err != nil {
@@ -335,6 +335,8 @@ func (s *FiberServer) AnalyticsHandler(c *fiber.Ctx) error {
 
 func (s *FiberServer) GetLinksHandler(c *fiber.Ctx) error {
 	sessionHeader := c.Get("Authorization")
+	keys := s.redisClient.Keys(context.Background(), "session:*")
+	fmt.Println(keys)
 	fmt.Println("in get link")
 	// ensure the session header is not empty and in the correct format
 	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
@@ -342,8 +344,11 @@ func (s *FiberServer) GetLinksHandler(c *fiber.Ctx) error {
 	}
 	// get the session id
 	sessionId := sessionHeader[7:]
-	user, err := s.GetSession(sessionId)
+
+	user, err := s.GetSession("session:"+sessionId)
 	if err != nil {
+		log.Printf("%v | %s", time.Now(), err.Error())
+
 		c.SendStatus(401)
 		return c.JSON(fiber.Map{"message": "You are not logged in..."})
 	}
