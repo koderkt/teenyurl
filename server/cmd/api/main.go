@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"teenyurl/internal/server"
 
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/koderkt/teenyurl/internal/server"
 )
 
 func main() {

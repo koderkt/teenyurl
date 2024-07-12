@@ -1,21 +1,8 @@
 <div>
 	<!-- TOP BAR -->
 	<div class="mt-2 ml-3 mr-3">
-		<!-- Logo -->
-		<div class="flex justify-between">
-			<div class="font-sans text-2xl font-[750] p-2">TEENYURL</div>
-			<div class="flex item-center font-bold">
-				<!-- LOGIN BUTTON -->
-				<div class="py-4">
-					<button class="p-2 px-4 text-gray-700">Login</button>
-				</div>
-				<!-- LOGIN BUTTON -->
-				<div class=" py-4">
-					<button class="p-2 px-4 bg-cyan-400 rounded-3xl text-white">Sign Up</button>
-				</div>
-			</div>
-		</div>
 		<!-- Parent container for body -->
+
 		<div class="flex flex-col justify-between items-center py-20 md:flex-row">
 			<div class="p-28 px-10">
 				<span class="font-sans text-2xl font-semibold"> Paste your log URL here:</span>

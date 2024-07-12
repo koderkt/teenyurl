@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"teenyurl/internal/types"
-	"teenyurl/internal/utils"
+
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/koderkt/teenyurl/internal/types"
+	"github.com/koderkt/teenyurl/internal/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Get("/", s.HelloWorldHandler)
-
 	s.App.Get("/health", s.healthHandler)
 	s.App.Post("/signup", s.SignUpHandler)
 	s.App.Post("/signin", s.SignInHandler)
@@ -84,10 +84,9 @@ func (s *FiberServer) SignInHandler(c *fiber.Ctx) error {
 	sessionId := uuid.NewString()
 
 	userSession, err := json.Marshal(types.UserSession{
-		Id:        user.ID,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Email:     user.Email,
+		Id:       user.ID,
+		UserName: user.UserName,
+		Email:    user.Email,
 	})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -152,8 +151,7 @@ func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 	}
 
 	user := types.User{
-		FirstName:         userCreationRequest.FirstName,
-		LastName:          userCreationRequest.LastName,
+		UserName:          userCreationRequest.UserName,
 		Email:             userCreationRequest.Email,
 		EncryptedPassword: string(encpw),
 		CreatedAt:         time.Now(),
@@ -264,7 +262,7 @@ func (s *FiberServer) GetSession(session string) (*types.UserSession, error) {
 
 func (s *FiberServer) ShortURLHandler(c *fiber.Ctx) error {
 	// sessionHeader := c.Get("Authorizati  on")
-	
+
 	// // ensure the session header is not empty and in the correct format
 	// if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
 	// 	return c.JSON(fiber.Map{"error": "invalid session header"})
@@ -345,7 +343,7 @@ func (s *FiberServer) GetLinksHandler(c *fiber.Ctx) error {
 	// get the session id
 	sessionId := sessionHeader[7:]
 
-	user, err := s.GetSession("session:"+sessionId)
+	user, err := s.GetSession("session:" + sessionId)
 	if err != nil {
 		log.Printf("%v | %s", time.Now(), err.Error())
 

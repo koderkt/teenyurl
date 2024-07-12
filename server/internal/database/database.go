@@ -8,11 +8,11 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"teenyurl/internal/types"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/koderkt/teenyurl/internal/types"
 	_ "github.com/lib/pq"
 )
 
@@ -128,8 +128,8 @@ func (s *service) Close() error {
 
 func (s *service) CreateUser(user *types.User) error {
 	createUserQuery := `insert into users
-	(first_name, last_name, email, encrypted_password, created_at)
-	values ($1, $2, $3, $4, $5)`
+	(user_name, email, encrypted_password, created_at)
+	values ($1, $2, $3, $4)`
 
 	userFromDb := &types.User{}
 
@@ -137,13 +137,18 @@ func (s *service) CreateUser(user *types.User) error {
 	err := s.db.Get(userFromDb, getUserQuery, user.Email)
 
 	if err != sql.ErrNoRows {
-		return errors.New("email already exists")
+		return errors.New("email/username already exists")
 	}
 
+	getUserQuery = "select * from users where user_name = $1"
+	err = s.db.Get(userFromDb, getUserQuery, user.Email)
+
+	if err != sql.ErrNoRows {
+		return errors.New("email/username already exists")
+	}
 	_, err = s.db.Query(
 		createUserQuery,
-		user.FirstName,
-		user.LastName,
+		user.UserName,
 		user.Email,
 		user.EncryptedPassword,
 		user.CreatedAt,
@@ -170,8 +175,7 @@ func (s *service) GetUserByEmail(email string) (*types.User, error) {
 func (s *service) createTables() error {
 	userTableQuery := `create table if not exists users (
 		id serial primary key,
-		first_name varchar(100),
-		last_name varchar(100),
+		user_name varchar(100),
 		email varchar(100),
 		encrypted_password varchar(100),
 		created_at timestamp

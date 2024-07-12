@@ -4,15 +4,14 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/koderkt/teenyurl/internal/database"
 	"github.com/redis/go-redis/v9"
-
-	"teenyurl/internal/database"
 )
 
 type FiberServer struct {
 	*fiber.App
 	redisClient *redis.Client
-	db database.Service
+	db          database.Service
 }
 
 func New() *FiberServer {
@@ -22,7 +21,7 @@ func New() *FiberServer {
 			AppName:      "teenyurl",
 		}),
 		redisClient: database.CreateRedisConnection(),
-		db: database.New(),
+		db:          database.New(),
 	}
 	err := server.db.Init()
 	if err != nil {

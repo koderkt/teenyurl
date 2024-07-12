@@ -1,11 +1,12 @@
 package tests
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"io"
 	"net/http"
-	"teenyurl/internal/server"
 	"testing"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/koderkt/teenyurl/internal/server"
 )
 
 func TestHandler(t *testing.T) {
