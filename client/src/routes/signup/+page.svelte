@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { PUBLIC_BASE_URL } from '$env/static/public';
 	import type { SignUpForm } from '../../app';
 	import type { PageData } from './$types';
+	let errorMessage = '';
 	let signUpForm: SignUpForm = {
 		email: '',
 		password: '',
@@ -8,10 +11,33 @@
 	};
 	let showPassword = false;
 
-	let signup = () => {
-		console.log(signUpForm);
-	};
+	const signup = async () => {
+		try {
+			const response = await fetch(`${PUBLIC_BASE_URL}/signup`, {
+				method: 'POST',
+				headers: {
+					Accept: 'application/json',
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					user_name: signUpForm.username,
+					email: signUpForm.email,
+					password: signUpForm.password
+				})
+			});
 
+			const data = await response.json();
+			if (response.status <= 201) {
+				await goto('/login', { noScroll: false, replaceState: true });
+			} else {
+				errorMessage = data.message;
+			}
+
+			// Navigate to login page after successful signup
+		} catch (error) {
+			console.log('Error registering', error);
+		}
+	};
 	// export let data: PageData;
 </script>
 
@@ -101,6 +127,10 @@
 					>Sign Up</button
 				>
 			</div>
+			{#if errorMessage}
+				<!-- Display error message -->
+				<div class="mb-4 text-red-600">{errorMessage}</div>
+			{/if}
 		</form>
 	</div>
 </div>

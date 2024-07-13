@@ -113,19 +113,24 @@ func (s *FiberServer) SignInHandler(c *fiber.Ctx) error {
 
 func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 	userCreationRequest := new(types.CreateUserRequest)
+
 	err := c.BodyParser(userCreationRequest)
 	if err != nil {
+		log.Printf("%v | Parsing CreateUserRequest | %s", time.Now().Local(), err.Error())
+
 		c.Status(400)
-		c.JSON(fiber.Error{
+		return c.JSON(fiber.Error{
 			Code:    fiber.StatusBadRequest,
 			Message: err.Error(),
 		})
-		return nil
+
 	}
 	validate := validator.New()
 	err = validate.Struct(userCreationRequest)
 
 	if err != nil {
+		log.Printf("%v | | %s", time.Now().Local(), err.Error())
+
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  fiber.StatusBadRequest,
 			"message": "bad request",
@@ -136,7 +141,9 @@ func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 	validate = validator.New()
 	validate.RegisterValidation("password", utils.PasswordValidator)
 	if err := validate.Var(userCreationRequest.Password, "required,password"); err != nil {
-		return c.JSON(fiber.Error{
+		log.Printf("%v | Validating password |%s", time.Now().Local(), err.Error())
+
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Error{
 			Code:    fiber.StatusBadRequest,
 			Message: "invalid password",
 		})
@@ -144,6 +151,8 @@ func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 	// Encrypt password before storing
 	encpw, err := bcrypt.GenerateFromPassword([]byte(userCreationRequest.Password), bcrypt.DefaultCost)
 	if err != nil {
+		log.Printf("%v | %s", time.Now().Local(), err.Error())
+
 		return c.JSON(fiber.Error{
 			Code:    fiber.StatusInternalServerError,
 			Message: "server error",
@@ -158,6 +167,8 @@ func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 	}
 	err = s.db.CreateUser(&user)
 	if err != nil {
+		log.Printf("%v | %s", time.Now().Local(), err.Error())
+
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Error{
 			Code:    fiber.StatusBadRequest,
 			Message: err.Error(),
