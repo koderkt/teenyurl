@@ -1,10 +1,5 @@
-<script lang="ts">
-	let email: string = '';
-	let password: string = '';
-	let showPassword = false;
-	let signIn = () => {
-		console.log(email, password);
-	};
+<script>
+	export let form;
 </script>
 
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -15,7 +10,7 @@
 	</div>
 
 	<div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-		<form on:submit|preventDefault={signIn} class="space-y-6">
+		<form method="POST" class="space-y-6">
 			<div>
 				<label for="email" class="block text-sm font-medium leading-6 text-gray-900"
 					>Email address</label
@@ -28,7 +23,6 @@
 						autocomplete="email"
 						required
 						class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
-						bind:value={email}
 					/>
 				</div>
 			</div>
@@ -40,31 +34,18 @@
 					>
 				</div>
 				<div class="mt-2">
-					{#if showPassword}
-						<input
-							id="password"
-							name="password"
-							type="text"
-							autocomplete="current-password"
-							required
-							class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
-							bind:value={password}
-						/>
-					{:else}
-						<input
-							id="password"
-							name="password"
-							type="password"
-							autocomplete="current-password"
-							required
-							class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
-							bind:value={password}
-						/>
-					{/if}
+					<input
+						id="password"
+						name="password"
+						type="text"
+						autocomplete="current-password"
+						required
+						class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
+					/>
 				</div>
 				<div class="mt-2">
 					<label>
-						<input type="checkbox" bind:checked={showPassword} />
+						<input type="checkbox" />
 						Show Password
 					</label>
 				</div>
@@ -77,6 +58,9 @@
 					>Sign in</button
 				>
 			</div>
+			{#if form}
+				<div class="mb-4 text-red-600">{form.error}</div>
+			{/if}
 		</form>
 	</div>
 </div>
