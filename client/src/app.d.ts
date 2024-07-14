@@ -10,11 +10,17 @@ declare global {
     }
 }
 
-export { SignUpForm };
+export { SignUpForm, ShortURLRespone };
 
 
 interface SignUpForm {
     username: string
     email: string
     password: string
+}
+
+interface ShortURLRespone {
+    short_url: string
+    long_url: string
+    link_id: int
 }

@@ -1,44 +1,7 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { PUBLIC_BASE_URL } from '$env/static/public';
-	import type { SignUpForm } from '../../app';
-	import type { PageData } from './$types';
-	let errorMessage = '';
-	let signUpForm: SignUpForm = {
-		email: '',
-		password: '',
-		username: ''
-	};
 	let showPassword = false;
 
-	const signup = async () => {
-		try {
-			const response = await fetch(`${PUBLIC_BASE_URL}/signup`, {
-				method: 'POST',
-				headers: {
-					Accept: 'application/json',
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					user_name: signUpForm.username,
-					email: signUpForm.email,
-					password: signUpForm.password
-				})
-			});
-
-			const data = await response.json();
-			if (response.status <= 299) {
-				await goto('/login', { noScroll: false, replaceState: true });
-			} else {
-				errorMessage = data.message;
-			}
-
-			// Navigate to login page after successful signup
-		} catch (error) {
-			console.log('Error registering', error);
-		}
-	};
-	// export let data: PageData;
+	export let form;
 </script>
 
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -49,7 +12,7 @@
 	</div>
 
 	<div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-		<form on:submit|preventDefault={signup} class="space-y-6">
+		<form action="/signup" method="POST" class="space-y-6">
 			<div>
 				<label for="username" class="block text-sm font-medium leading-6 text-gray-900"
 					>User name</label
@@ -62,7 +25,6 @@
 						autocomplete="username"
 						required
 						class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
-						bind:value={signUpForm.username}
 					/>
 				</div>
 			</div>
@@ -78,7 +40,6 @@
 						autocomplete="email"
 						required
 						class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
-						bind:value={signUpForm.email}
 					/>
 				</div>
 			</div>
@@ -90,27 +51,14 @@
 					>
 				</div>
 				<div class="mt-2">
-					{#if showPassword}
-						<input
-							id="password"
-							name="password"
-							type="text"
-							autocomplete="current-password"
-							required
-							class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
-							bind:value={signUpForm.password}
-						/>
-					{:else}
-						<input
-							id="password"
-							name="password"
-							type="password"
-							autocomplete="current-password"
-							required
-							class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
-							bind:value={signUpForm.password}
-						/>
-					{/if}
+					<input
+						id="password"
+						name="password"
+						type={showPassword ? 'password' : 'text'}
+						autocomplete="current-password"
+						required
+						class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
+					/>
 				</div>
 				<div class="mt-2">
 					<label>
@@ -127,9 +75,9 @@
 					>Sign Up</button
 				>
 			</div>
-			{#if errorMessage}
+			{#if form}
 				<!-- Display error message -->
-				<div class="mb-4 text-red-600">{errorMessage}</div>
+				<div class="mb-4 text-red-600">{form.error}</div>
 			{/if}
 		</form>
 	</div>

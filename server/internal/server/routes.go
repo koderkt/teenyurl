@@ -55,7 +55,8 @@ func (s *FiberServer) SignInHandler(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  fiber.StatusBadRequest,
+			"success": false,
+
 			"message": "email or password is incorrect",
 		})
 	}
@@ -65,7 +66,8 @@ func (s *FiberServer) SignInHandler(c *fiber.Ctx) error {
 	if err != nil {
 		fmt.Println(err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  false,
+			"success": false,
+
 			"message": "email or password is incorrect",
 		})
 	}
@@ -75,40 +77,44 @@ func (s *FiberServer) SignInHandler(c *fiber.Ctx) error {
 
 	if !isValidPassword {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"status":  fiber.StatusUnauthorized,
+			"success": false,
+
 			"message": "email or password is incorrect",
 		})
 	}
 
 	// Generate session_id
 	sessionId := uuid.NewString()
-
-	userSession, err := json.Marshal(types.UserSession{
+	userSession := types.UserSession{
 		Id:       user.ID,
 		UserName: user.UserName,
 		Email:    user.Email,
-	})
+	}
+	userSessionBytes, err := json.Marshal(userSession)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status":  fiber.ErrInternalServerError,
+			"success": false,
+
 			"message": "internal server error",
 		})
 	}
 
 	// Store session_id and send it to client
-	err = s.redisClient.Set(context.Background(), "session:"+sessionId, string(userSession), 2*time.Hour).Err()
+	err = s.redisClient.Set(context.Background(), "session:"+sessionId, string(userSessionBytes), 2*time.Hour).Err()
 	if err != nil {
 		fmt.Println(err)
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status":  fiber.ErrInternalServerError,
+			"success": false,
 			"message": "internal server error",
 		})
 	}
 
 	c.Response().Header.Set("Authorization", fmt.Sprintf("Bearer %s", sessionId))
 
-	return c.JSON(fiber.Map{"success": true})
+	return c.JSON(fiber.Map{"success": true,
+		"user": userSession,
+	})
 }
 
 func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
@@ -183,14 +189,14 @@ func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 
 func (s *FiberServer) CreateShortURLHandler(c *fiber.Ctx) error {
 	sessionHeader := c.Get("Authorization")
-
+	fmt.Println("Hello there", sessionHeader)
 	// ensure the session header is not empty and in the correct format
 	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
 		return c.JSON(fiber.Map{"error": "invalid session header"})
 	}
 	// get the session id
 	sessionId := sessionHeader[7:]
-	userSession, err := s.GetSession(sessionId)
+	userSession, err := s.GetSession("session:" + sessionId)
 	if err != nil {
 		c.SendStatus(401)
 		return c.JSON(fiber.Map{"message": "You are not logged in..."})
@@ -204,12 +210,12 @@ func (s *FiberServer) CreateShortURLHandler(c *fiber.Ctx) error {
 	}
 	parsedURL, err := url.ParseRequestURI(longURLRequst.LongUrl)
 	if err != nil {
-		return c.JSON(fiber.Map{"message": "invalid url"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid url"})
 	}
 
 	// Check if the scheme (protocol) and host (domain) are valid
 	if parsedURL.Scheme == "" || parsedURL.Host == "" {
-		return c.JSON(fiber.Map{"message": "invalid url"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "invalid url"})
 	}
 
 	// Validate whether the link is valid

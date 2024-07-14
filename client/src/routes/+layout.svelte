@@ -1,7 +1,8 @@
 <script>
 	import NavBar from '$lib/NavBar.svelte';
 	import '../app.css';
+	export let data;
 </script>
 
-<NavBar />
-<slot />
+<NavBar {data} />
+<slot></slot>

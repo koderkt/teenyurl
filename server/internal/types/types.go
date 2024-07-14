@@ -24,9 +24,9 @@ type UserSignInRequest struct {
 }
 
 type UserSession struct {
-	Id       int
-	UserName string
-	Email    string
+	Id       int    `json:"id"`
+	UserName string `json:"user_name"`
+	Email    string `json:"email"`
 }
 type ErrorResponse struct {
 	Error string
@@ -46,9 +46,9 @@ type Link struct {
 }
 
 type CreateShortURLResponse struct {
-	ShortURL    string
-	OriginalURL string
-	LinkId      int
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"long_url"`
+	LinkId      int    `json:"link_id"`
 }
 
 type Clicks struct {

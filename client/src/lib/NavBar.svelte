@@ -1,4 +1,5 @@
 <script lang="ts">
+	export let data;
 	import { goto } from '$app/navigation';
 	let isLoggedIn = false;
 	const logout = async () => {
@@ -17,7 +18,7 @@
 
 <nav class="flex mt-2 ml-3 mr-3 justify-between">
 	<a href="/" class="font-sans text-2xl font-[750] p-2">TEENYURL</a>
-	{#if isLoggedIn === false}
+	{#if data.sessionId == null}
 		<div class="flex item-center font-bold">
 			<div class="py-4">
 				<a class="p-2 px-4 text-gray-700" href="/login">Login</a>
