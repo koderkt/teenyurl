@@ -32,10 +32,11 @@
 			<div class="py-4">
 				<a class="p-2 px-4 text-gray-700" href="/links">My Links</a>
 			</div>
-			<div class="py-4">
-				<button class="p-2 px-4 bg-cyan-400 rounded-3xl text-white" on:click={logout}>Logout</button
-				>
-			</div>
+			<form action="/logout" method="POST">
+				<div class="py-4">
+					<button class="p-2 px-4 bg-cyan-400 rounded-3xl text-white">Logout</button>
+				</div>
+			</form>
 		</div>
 	{/if}
 </nav>
