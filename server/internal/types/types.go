@@ -37,12 +37,12 @@ type ShortenRequest struct {
 }
 
 type Link struct {
-	Id          int       `db:"id"`
-	OriginalURL string    `db:"original_url"`
-	ShortURL    string    `db:"short_url"`
-	CreatedAt   time.Time `db:"created_at"`
-	UserId      int       `db:"user_id"`
-	IsEnabled   bool      `db:"is_enabled"`
+	Id          int       `json:"id" db:"id"`
+	OriginalURL string    `json:"original_url" db:"original_url"`
+	ShortURL    string    `json:"short_url" db:"short_url"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UserId      int       `json:"user_id" db:"user_id"`
+	IsEnabled   bool      `json:"is_enabled" db:"is_enabled"`
 }
 
 type CreateShortURLResponse struct {
@@ -57,4 +57,13 @@ type Clicks struct {
 	Timestamp  time.Time `db:"time_stamp"`
 	DeviceType string    `db:"device_type"`
 	Location   string    `db:"location"`
+}
+
+type LinkResponse struct {
+	Id          int       `json:"id" db:"id"`
+	OriginalURL string    `json:"original_url" db:"original_url"`
+	ShortURL    string    `json:"short_url" db:"short_url"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	IsEnabled   bool      `json:"is_enabled" db:"is_enabled"`
+	Clicks int `json:"clicks"`
 }

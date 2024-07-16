@@ -1,7 +1,6 @@
-import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { PRIVATE_BASE_URL } from '$env/static/private';
-import type { ShortURLRespone } from '../app';
+import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = (async ({ cookies, fetch }) => {
     // fetch the current user's todos from the server
@@ -9,13 +8,13 @@ export const load: PageServerLoad = (async ({ cookies, fetch }) => {
     const data = {
         sessionId: sessionId
     }
-
+    if (!sessionId) {
+        redirect(302, "/login")
+    }
     if (sessionId) {
         return data;
     }
-    return {
-        sessionId: null
-    }
+
 }) satisfies PageServerLoad;
 
 
@@ -24,7 +23,6 @@ export const actions = {
     default: async (event) => {
         const formData = await event.request.formData();
         const longURL = formData.get('longurl');
-        console.log(longURL)
         const cookie = event.cookies.get("sessionId");
 
         const response = await fetch(`${PRIVATE_BASE_URL}/links`, {

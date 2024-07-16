@@ -1,5 +1,6 @@
-import { writable } from 'svelte/store';
+// app.svelte
 
-const user = writable(null);
+import { writable } from "svelte/store";
 
-export default user
+export let isLoggedIn = writable(true); // Assuming initial login state
+

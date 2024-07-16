@@ -1,19 +1,19 @@
 <script lang="ts">
 	export let data;
-	import { goto } from '$app/navigation';
-	let isLoggedIn = false;
-	const logout = async () => {
-		await fetch('http://localhost:3030/api/logout', {
-			method: 'POST',
-			credentials: 'include',
-			headers: {
-				Accept: 'application/json',
-				'content-type': 'application/json'
-			}
-		});
-		// user.update(val => val = null);
-		await goto('/', { noScroll: false, replaceState: true });
-	};
+	// import { goto } from '$app/navigation';
+	// let isLoggedIn = false;
+	// const logout = async () => {
+	// 	await fetch('http://localhost:8080/api/logout', {
+	// 		method: 'POST',
+	// 		credentials: 'include',
+	// 		headers: {
+	// 			Accept: 'application/json',
+	// 			'content-type': 'application/json'
+	// 		}
+	// 	});
+	// 	// user.update(val => val = null);
+	// 	await goto('/', { noScroll: false, replaceState: true });
+	// };
 </script>
 
 <nav class="flex mt-2 ml-3 mr-3 justify-between">

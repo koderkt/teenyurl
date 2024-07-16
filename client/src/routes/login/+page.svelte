@@ -1,5 +1,6 @@
 <script>
 	export let form;
+	let showPassword = false;
 </script>
 
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -37,7 +38,7 @@
 					<input
 						id="password"
 						name="password"
-						type="text"
+						type={showPassword ? 'text' : 'password'}
 						autocomplete="current-password"
 						required
 						class="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-cyan-500 sm:text-sm sm:leading-6"
@@ -45,7 +46,7 @@
 				</div>
 				<div class="mt-2">
 					<label>
-						<input type="checkbox" />
+						<input type="checkbox" bind:checked={showPassword} />
 						Show Password
 					</label>
 				</div>

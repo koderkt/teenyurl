@@ -1,9 +1,11 @@
 import { applyAction } from '$app/forms';
 import { PRIVATE_BASE_URL } from '$env/static/private';
 import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from '../$types.js';
 
-export const load = async (event) => {
+export const load: PageServerLoad = async (event) => {
     const sessionId = event.cookies.get("sessionId");
+
 
     if (sessionId) {
         redirect(301, '/');

@@ -23,9 +23,10 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Get("/health", s.healthHandler)
 	s.App.Post("/signup", s.SignUpHandler)
 	s.App.Post("/signin", s.SignInHandler)
+	s.App.Post("/signout", s.SignOutHandler)
 	s.App.Post("/links", s.CreateShortURLHandler)
 	s.App.Get("/links", s.GetLinksHandler)
-	s.App.Get(":shortCode", s.ShortURLHandler)
+	s.App.Get("/:shortCode", s.ShortURLHandler)
 	s.App.Get("/analytics/:shortCode", s.AnalyticsHandler)
 }
 
@@ -117,6 +118,27 @@ func (s *FiberServer) SignInHandler(c *fiber.Ctx) error {
 	})
 }
 
+func (s *FiberServer) SignOutHandler(c *fiber.Ctx) error {
+	sessionHeader := c.Get("Authorization")
+	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "invalid session header"})
+	}
+	// get the session id
+	sessionId := sessionHeader[7:]
+	_, err := s.GetSession("session:" + sessionId)
+	if err != nil {
+		c.SendStatus(401)
+		return c.JSON(fiber.Map{"message": "unauthorized"})
+	}
+	err = s.redisClient.Del(context.Background(), "session:"+sessionId).Err()
+	if err != nil {
+		c.SendStatus(401)
+		return c.JSON(fiber.Map{"message": "internal server error"})
+	}
+	return c.Status(200).JSON(fiber.Map{
+		"message": "logout successful",
+	})
+}
 func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 	userCreationRequest := new(types.CreateUserRequest)
 
@@ -189,7 +211,6 @@ func (s *FiberServer) SignUpHandler(c *fiber.Ctx) error {
 
 func (s *FiberServer) CreateShortURLHandler(c *fiber.Ctx) error {
 	sessionHeader := c.Get("Authorization")
-	fmt.Println("Hello there", sessionHeader)
 	// ensure the session header is not empty and in the correct format
 	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
 		return c.JSON(fiber.Map{"error": "invalid session header"})
@@ -247,7 +268,7 @@ func (s *FiberServer) CreateShortURLHandler(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "failed to create short url"})
 	}
 	responseData := types.CreateShortURLResponse{
-		ShortURL:    recordFromDB.ShortURL,
+		ShortURL:    string(c.Request().Host()) + "/" + recordFromDB.ShortURL,
 		OriginalURL: recordFromDB.OriginalURL,
 		LinkId:      recordFromDB.Id,
 	}
@@ -278,6 +299,7 @@ func (s *FiberServer) GetSession(session string) (*types.UserSession, error) {
 }
 
 func (s *FiberServer) ShortURLHandler(c *fiber.Ctx) error {
+	fmt.Println("hello")
 	// sessionHeader := c.Get("Authorizati  on")
 
 	// // ensure the session header is not empty and in the correct format
@@ -293,6 +315,8 @@ func (s *FiberServer) ShortURLHandler(c *fiber.Ctx) error {
 	// }
 	shortCode := c.Params("shortCode")
 	link, err := s.db.GetLink(shortCode)
+	fmt.Println("Before....")
+
 	if err != nil {
 
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -304,7 +328,7 @@ func (s *FiberServer) ShortURLHandler(c *fiber.Ctx) error {
 		DeviceType: "Unknown",
 		Location:   "Unknown",
 	}
-
+	fmt.Println("InsertAnalytics....")
 	err = s.db.InsertAnalytics(&analyticsData)
 	if err != nil {
 		log.Printf("%v | %s", time.Now(), err.Error())
@@ -350,12 +374,10 @@ func (s *FiberServer) AnalyticsHandler(c *fiber.Ctx) error {
 
 func (s *FiberServer) GetLinksHandler(c *fiber.Ctx) error {
 	sessionHeader := c.Get("Authorization")
-	keys := s.redisClient.Keys(context.Background(), "session:*")
-	fmt.Println(keys)
-	fmt.Println("in get link")
+
 	// ensure the session header is not empty and in the correct format
 	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
-		return c.JSON(fiber.Map{"error": "invalid session header"})
+		return c.Status(400).JSON(fiber.Map{"error": "invalid session header"})
 	}
 	// get the session id
 	sessionId := sessionHeader[7:]
@@ -369,7 +391,7 @@ func (s *FiberServer) GetLinksHandler(c *fiber.Ctx) error {
 	}
 
 	links, err := s.db.GetLinks(user.Id)
-
+	linksResponse := []types.LinkResponse{}
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.SendStatus(fiber.StatusAccepted)
@@ -378,5 +400,21 @@ func (s *FiberServer) GetLinksHandler(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "something went wrong"})
 		}
 	}
-	return c.Status(fiber.StatusAccepted).JSON(links)
+	for _, link := range *links {
+		var linkResponse types.LinkResponse
+		clicks, err := s.db.GetNumberOfClicks(link.ShortURL)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "something went wrong"})
+		}
+		linkResponse.ShortURL = string(c.Request().Host()) + "/" + link.ShortURL
+		linkResponse.OriginalURL = link.OriginalURL
+		linkResponse.CreatedAt = link.CreatedAt
+		linkResponse.Clicks = clicks
+		linkResponse.IsEnabled = link.IsEnabled
+		linkResponse.Id = link.Id
+
+		linksResponse = append(linksResponse, linkResponse)
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(linksResponse)
 }

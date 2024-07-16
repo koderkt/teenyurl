@@ -10,7 +10,7 @@ declare global {
     }
 }
 
-export { SignUpForm, ShortURLRespone };
+export { SignUpForm, ShortURLRespone, Link };
 
 
 interface SignUpForm {
@@ -23,4 +23,13 @@ interface ShortURLRespone {
     short_url: string
     long_url: string
     link_id: int
+}
+
+interface Link {
+    id: int
+    original_url: string
+    short_url: string
+    created_at: string
+    clicks: int
+    is_enabled: bool
 }

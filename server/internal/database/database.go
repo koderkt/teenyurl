@@ -28,7 +28,7 @@ type Service interface {
 	GetLinks(int) (*[]types.Link, error)
 	InsertAnalytics(*types.Clicks) error
 	GetAnalystics(string) (*[]types.Clicks, error)
-
+	GetNumberOfClicks(string) (int, error)
 	// GetOriginalURL(string) (string, error)
 }
 
@@ -248,6 +248,7 @@ func (s *service) GetLink(shortURL string) (*types.Link, error) {
 }
 
 func (s *service) InsertAnalytics(analytics *types.Clicks) error {
+	fmt.Println(*analytics)
 	query := `INSERT INTO clicks (short_code, device_type, location)
 	values ($1, $2, $3)`
 
@@ -285,4 +286,28 @@ func (s *service) GetLinks(userId int) (*[]types.Link, error) {
 	}
 
 	return &links, nil
+}
+
+func (s *service) GetNumberOfClicks(shortURL string) (int, error) {
+	query := `SELECT 
+                COUNT(c.id) as click_count
+              FROM 
+                urls u
+              LEFT JOIN 
+                clicks c 
+              ON 
+                u.short_url = c.short_code
+              WHERE 
+                u.short_url = $1
+              GROUP BY 
+                u.short_url;`
+
+    var clickCount int
+    err := s.db.Get(&clickCount, query, shortURL)
+    if err != nil {
+        return 0, err
+    }
+	
+    return clickCount, nil
+
 }

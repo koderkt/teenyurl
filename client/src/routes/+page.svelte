@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { PUBLIC_BASE_URL } from '$env/static/public';
-
+	
 	export let form;
 	let longURL = form?.longURL || '';
 	let shortURL = form?.shortURL || '';
@@ -11,7 +10,7 @@
 	<div class="mt-2 ml-3 mr-3">
 		<!-- Parent container for body -->
 
-		<div class="flex flex-col justify-between items-center py-20 md:flex-row">
+		<div class="flex flex-col justify-between items-center py-20 md:flex-row md:ml-40">
 			<div class="p-28 px-10">
 				<span class="font-sans text-2xl font-semibold"> Paste your log URL here:</span>
 				<form action="/" method="POST">
