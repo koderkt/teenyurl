@@ -29,7 +29,8 @@ type Service interface {
 	InsertAnalytics(*types.Clicks) error
 	GetAnalystics(string) (*[]types.Clicks, error)
 	GetNumberOfClicks(string) (int, error)
-	// GetOriginalURL(string) (string, error)
+	EditLink(*types.Link) (error)
+	EnableDisableLink(*types.Link)error
 }
 
 type service struct {
@@ -302,12 +303,48 @@ func (s *service) GetNumberOfClicks(shortURL string) (int, error) {
               GROUP BY 
                 u.short_url;`
 
-    var clickCount int
-    err := s.db.Get(&clickCount, query, shortURL)
-    if err != nil {
-        return 0, err
-    }
-	
-    return clickCount, nil
+	var clickCount int
+	err := s.db.Get(&clickCount, query, shortURL)
+	if err != nil {
+		return 0, err
+	}
 
+	return clickCount, nil
+
+}
+
+func (s *service) EditLink(link *types.Link) error {
+	query := `UPDATE urls
+			SET original_url = $1
+			WHERE short_url = $2;
+			`
+	result, err := s.db.Exec(query, link.OriginalURL, link.ShortURL)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return nil
+}
+
+func (s *service) EnableDisableLink(link *types.Link) error {
+	query := `UPDATE urls
+			SET is_enabled = $1
+			WHERE short_url = $2;
+			`
+	result, err := s.db.Exec(query, link.IsEnabled, link.ShortURL)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return nil
 }

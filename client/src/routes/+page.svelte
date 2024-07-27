@@ -47,7 +47,7 @@
 				</div>
 			</div>
 
-			<div class="px-5 md:flex-grow-0">
+			<div class="px-5 ">
 				<img class="" src="src/assets/images/illustration-working.svg" alt="" />
 			</div>
 		</div>

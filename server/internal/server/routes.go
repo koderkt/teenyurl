@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strconv"
 
 	"time"
 
@@ -27,6 +28,9 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Post("/links", s.CreateShortURLHandler)
 	s.App.Get("/links", s.GetLinksHandler)
 	s.App.Get("/:shortCode", s.ShortURLHandler)
+
+	s.App.Post("/:shortCode", s.EditLongURLHandler)
+	s.App.Post("/:shortCode/:val", s.EnableDisbaleURLHandler)
 	s.App.Get("/analytics/:shortCode", s.AnalyticsHandler)
 }
 
@@ -323,6 +327,11 @@ func (s *FiberServer) ShortURLHandler(c *fiber.Ctx) error {
 			"error": "link not found",
 		})
 	}
+	if !link.IsEnabled {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "link is disabled at the moment",
+		})
+	}
 	analyticsData := types.Clicks{
 		ShortCode:  shortCode,
 		DeviceType: "Unknown",
@@ -416,5 +425,99 @@ func (s *FiberServer) GetLinksHandler(c *fiber.Ctx) error {
 		linksResponse = append(linksResponse, linkResponse)
 	}
 
+	return c.Status(fiber.StatusAccepted).JSON(linksResponse)
+}
+
+func (s *FiberServer) EditLongURLHandler(c *fiber.Ctx) error {
+	sessionHeader := c.Get("Authorization")
+
+	longURL := types.CreateShortURLResponse{}
+
+	err := c.BodyParser(&longURL)
+	if err != nil {
+		log.Printf("%v | %s", time.Now(), err.Error())
+
+		return c.Status(400).JSON(fiber.Map{"error": "bad request"})
+	}
+	// ensure the session header is not empty and in the correct format
+	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid session header"})
+	}
+	// get the session id
+	sessionId := sessionHeader[7:]
+
+	_, err = s.GetSession("session:" + sessionId)
+	if err != nil {
+		log.Printf("%v | %s", time.Now(), err.Error())
+
+		c.SendStatus(401)
+		return c.JSON(fiber.Map{"message": "You are not logged in..."})
+	}
+
+	shortCode := c.Params("shortCode")
+
+	link, err := s.db.GetLink(shortCode)
+	linksResponse := []types.LinkResponse{}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.SendStatus(fiber.StatusAccepted)
+			return err
+		} else {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "something went wrong"})
+		}
+	}
+	link.OriginalURL = longURL.OriginalURL
+
+	err = s.db.EditLink(link)
+	if err != nil {
+		log.Printf("%v | %s", time.Now(), err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "something went wrong"})
+	}
+	return c.Status(fiber.StatusAccepted).JSON(linksResponse)
+}
+
+func (s *FiberServer) EnableDisbaleURLHandler(c *fiber.Ctx) error {
+	sessionHeader := c.Get("Authorization")
+
+	// ensure the session header is not empty and in the correct format
+	if sessionHeader == "" || len(sessionHeader) < 8 || sessionHeader[:7] != "Bearer " {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid session header"})
+	}
+	// get the session id
+	sessionId := sessionHeader[7:]
+
+	_, err := s.GetSession("session:" + sessionId)
+	if err != nil {
+		log.Printf("%v | %s", time.Now(), err.Error())
+
+		c.SendStatus(401)
+		return c.JSON(fiber.Map{"message": "You are not logged in..."})
+	}
+
+	shortCode := c.Params("shortCode")
+
+	val, err := strconv.ParseBool(c.Params("val"))
+	if err != nil {
+		c.SendStatus(400)
+		return c.JSON(fiber.Map{"message": "bad rerquest"})
+	}
+
+	link, err := s.db.GetLink(shortCode)
+	linksResponse := []types.LinkResponse{}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.SendStatus(fiber.StatusAccepted)
+			return err
+		} else {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "something went wrong"})
+		}
+	}
+
+	link.IsEnabled = val
+	err = s.db.EnableDisableLink(link)
+	if err != nil {
+		log.Printf("%v | %s", time.Now(), err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "something went wrong"})
+	}
 	return c.Status(fiber.StatusAccepted).JSON(linksResponse)
 }
